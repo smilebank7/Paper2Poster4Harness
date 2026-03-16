@@ -1,0 +1,18 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": [
+    "."
+  ],
+  "typeCheckingMode": "off",
+  "diagnosticSeverityOverrides": {
+    "reportPrivateImportUsage": "none",
+    "reportCallIssue": "none",
+    "reportArgumentType": "none",
+    "reportIndexIssue": "none",
+    "reportOperatorIssue": "none",
+    "reportOptionalSubscript": "none",
+    "reportAttributeAccessIssue": "none",
+    "reportMissingImports": "none"
+  }
+}

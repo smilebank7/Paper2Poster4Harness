@@ -1,124 +1,74 @@
 # Paper2Poster4Harness
 
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Backend](https://img.shields.io/badge/AI-Claude%20CLI-green.svg)](https://github.com/anthropics/claude-code)
+Generate academic posters from papers using Claude Code - no API keys needed.
 
-Generate academic posters from papers using Claude Code — no API keys needed.
+## How It Works
 
-## What This Repo Changes
+1. **Drop** your paper PDF into the `input/` folder
+2. **Tell** Claude Code: "포스터 만들어줘" or "Generate a poster"
+3. **Get** your poster in `output/` (PPTX + PNG)
 
-This repository adapts the original Paper2Poster pipeline to run all AI calls through local Claude CLI (`claude -p`) instead of CAMEL + OpenAI APIs.
+Claude Code follows the instructions in `AGENTS.md` to orchestrate the full pipeline:
+- **AI tasks** (content structuring, figure selection, bullet generation) - Claude does these directly
+- **Non-AI tasks** (PDF parsing, layout math, PPTX rendering) - Python scripts handle these
 
-- Replaces `ChatAgent`/`ModelFactory` calls with `HarnessAgent` (`harness/agent.py`)
-- Removes CAMEL/OpenAI/vLLM from runtime dependencies
-- Replaces vision-model overflow critic with heuristic overflow detection (`harness/vision.py`)
-- Keeps deterministic layout and PPTX generation flow from the original project
+No API keys. No environment variables. Just your Claude Code subscription.
 
 ## Prerequisites
 
+- [Claude Code](https://github.com/anthropics/claude-code) or [OpenCode](https://github.com/opencode-ai/opencode) installed
 - Python 3.10+
-- Claude Code CLI (`claude`) or OpenCode CLI installed and authenticated
-- LibreOffice (`soffice`) for PPTX -> image conversion
-- poppler for PDF/image processing
+- LibreOffice (`soffice`) for PNG preview
 
-## Installation
+## Setup
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/smilebank7/Paper2Poster4Harness.git
 cd Paper2Poster4Harness
 pip install -r requirements.txt
 ```
 
-Verify Claude CLI:
-
-```bash
-which claude
-```
-
 ## Usage
 
-Place a paper as:
+```bash
+# 1. Drop your paper
+cp my_paper.pdf input/
+
+# 2. Open Claude Code in this directory
+claude  # or opencode
+
+# 3. Tell it to make a poster
+> 포스터 만들어줘
+> Generate a poster from the paper in input/
+```
+
+## Architecture
 
 ```text
-data/{paper_name}/paper.pdf
+input/paper.pdf
+    |
+    v  [Script] parse_pdf.py - Docling extracts text + figures
+    |
+    v  [Claude AI] Structure content into JSON sections
+    |
+    v  [Claude AI] Select relevant figures
+    |
+    v  [Claude AI] Assign figures to sections
+    |
+    v  [Script] generate_layout.py - Tree-split algorithm
+    |
+    v  [Claude AI] Generate bullet-point content
+    |
+    v  [Script] render_poster.py - python-pptx generates PPTX
+    |
+output/poster.pptx + poster.png
 ```
 
-Run:
+## Credits
 
-```bash
-python run.py --paper_path data/my_paper/paper.pdf
-```
-
-Custom poster size:
-
-```bash
-python run.py \
-  --paper_path data/my_paper/paper.pdf \
-  --poster_width_inches 48 \
-  --poster_height_inches 36
-```
-
-Add conference logo search hint:
-
-```bash
-python run.py --paper_path data/my_paper/paper.pdf --conference_venue "NeurIPS"
-```
-
-## Output
-
-Generated assets are saved under:
-
-```text
-<{model_t}_{model_v}>_generated_posters/data/{paper_name}/
-```
-
-Typical files:
-
-- `{paper_name}.pptx`
-- `slide_0001.jpg`
-- `log.json`
-
-## Pipeline Architecture
-
-```text
-PDF paper
-  |
-  v
-[1] Parse (Docling -> markdown -> Claude JSON sections)
-  |
-  v
-[2] Filter figures/tables (Claude)
-  |
-  v
-[3] Plan sections + figure assignment (Claude)
-  |
-  v
-[4] Layout (deterministic tree split, no AI)
-  |
-  v
-[5] Generate content (Claude) + heuristic overflow checks
-  |
-  v
-[6] Render poster (python-pptx)
-```
-
-## Claude Code Skill
-
-This repo includes a local skill at:
-
-- `.claude/skills/paper2poster/SKILL.md`
-
-It provides a ready workflow for running poster generation inside Claude Code/OpenCode.
-
-## Attribution
-
-This project is based on the original Paper2Poster implementation:
-
-- https://github.com/Paper2Poster/Paper2Poster
-
-Credit for the base architecture, prompts, and layout approach belongs to the original authors.
+Based on [Paper2Poster](https://github.com/Paper2Poster/Paper2Poster) (NeurIPS 2025).
+Original architecture, prompts, and layout algorithm by the Paper2Poster team.
 
 ## License
 
-This repository is distributed under the MIT License. See `LICENSE`.
+MIT

@@ -1,50 +1,64 @@
 # Paper2Poster4Harness
 
-## Overview
-This project generates academic posters from research papers using Claude Code/OpenCode as the AI backend.
-No API keys needed — uses your Claude subscription through the CLI harness.
+Generate academic posters from research papers. Drop a PDF in `input/`, tell me to make a poster.
 
 ## How It Works
-Original Paper2Poster uses CAMEL framework + OpenAI API. This version replaces ALL AI calls with
-`claude -p` CLI subprocess calls, so your Claude Code subscription handles the AI workload.
 
-## Pipeline (6 stages)
-1. **Parse** — Docling extracts PDF -> Markdown, Claude structures into JSON sections
-2. **Filter** — Claude selects relevant figures/tables from extracted images
-3. **Plan** — Claude assigns figures to sections, computes layout ratios
-4. **Layout** — Deterministic tree-split algorithm generates bounding boxes (no AI)
-5. **Content** — Claude generates bullet-point content per section, with heuristic overflow detection
-6. **Render** — python-pptx generates the final poster.pptx
+When you ask me to generate a poster, I follow this pipeline:
+
+1. **Parse** - Extract text and figures from the PDF
+2. **Structure** - Organize paper content into poster sections
+3. **Filter** - Select the most relevant figures/tables
+4. **Plan** - Assign figures to sections
+5. **Layout** - Generate spatial layout (deterministic algorithm)
+6. **Content** - Write bullet-point text for each section
+7. **Render** - Generate the final poster (PPTX + PNG)
 
 ## Quick Start
+
+1. Place your paper PDF in `input/`
+2. Tell me: "포스터 만들어줘" or "Generate a poster from the paper in input/"
+
+## Pipeline Details
+
+### Step 1: Parse PDF
+I run the parsing script to extract text and images:
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt
-sudo apt install libreoffice  # or download soffice
+python scripts/parse_pdf.py input/{paper}.pdf --output-dir workspace/{paper}/
+```
+This produces: `workspace/{paper}/paper.md` + `workspace/{paper}/images/`
 
-# 2. Prepare your paper
-mkdir -p data/my_paper
-cp my_paper.pdf data/my_paper/paper.pdf
+### Step 2: Structure Content
+I read `workspace/{paper}/paper.md` and follow `prompts/01_structure_paper.md` to create:
+`workspace/{paper}/raw_content.json`
 
-# 3. Generate poster
-python run.py --paper_path data/my_paper/paper.pdf --poster_width_inches 48 --poster_height_inches 36
+### Step 3: Filter Figures
+I read `workspace/{paper}/image_metadata.json` and follow `prompts/02_filter_figures.md` to create:
+`workspace/{paper}/filtered_figures.json`
+
+### Step 4: Plan Section-Figure Assignment
+I follow `prompts/03_plan_sections.md` to assign figures to sections:
+`workspace/{paper}/figure_plan.json`
+
+### Step 5: Generate Layout
+I run the layout algorithm:
+```bash
+python scripts/generate_layout.py workspace/{paper}/raw_content.json workspace/{paper}/figure_plan.json --output workspace/{paper}/layout.json
 ```
 
-## For Claude Code Users
-When using this repo with Claude Code, you can simply say:
-> "Generate a poster from the paper at data/my_paper/paper.pdf"
+### Step 6: Generate Content
+I follow `prompts/04_generate_bullets.md` and `prompts/05_generate_title.md` to create:
+`workspace/{paper}/poster_content.json`
 
-Claude Code will read this AGENTS.md and follow the pipeline automatically.
+### Step 7: Render Poster
+```bash
+python scripts/render_poster.py workspace/{paper}/layout.json workspace/{paper}/poster_content.json --output output/{paper}/poster.pptx --config config/poster.yaml
+```
+
+## Output
+- `output/{paper}/poster.pptx` - Editable PowerPoint poster
+- `output/{paper}/poster.png` - Preview image
 
 ## Prerequisites
-- Claude Code CLI (`claude`) or OpenCode CLI installed and authenticated
-- Python 3.10+
-- LibreOffice (for PPTX -> image conversion)
-- poppler (for PDF processing)
-
-## Architecture
-- `harness/` — Claude CLI adapter (replaces CAMEL framework)
-- `PosterAgent/` — Main pipeline modules
-- `utils/` — PPTX utilities, prompt templates, styling
-- `config/` — Poster YAML configuration
-- `assets/` — Training data for layout algorithm
+- Python 3.10+ with: `pip install -r requirements.txt`
+- LibreOffice (`soffice`) for PNG conversion
