@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+tmp/
+tree_splits/
+contents/
+*_generated_posters/
+*_images_and_tables/
+checkpoints/
+log/
+*.pptx
+!assets/**/*.pptx
+.DS_Store
+*.egg-info/
+dist/
+build/
