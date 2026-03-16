@@ -75,11 +75,10 @@ class HarnessAgent:
             prompt_file = f.name
 
         try:
-            # Try piping to claude CLI
-            cmd = (
-                f'cat "{prompt_file}" | claude -p --output-format text --no-input '
-                "2>/dev/null"
-            )
+            # Pipe prompt file to claude -p (non-interactive print mode)
+            prompt_size = os.path.getsize(prompt_file)
+            print(f"[harness] Calling claude -p ({prompt_size} bytes)...", flush=True)
+            cmd = f'cat "{prompt_file}" | claude -p --output-format text'
             result = subprocess.run(
                 cmd,
                 shell=True,
@@ -96,7 +95,6 @@ class HarnessAgent:
                     prompt[:50000],
                     "--output-format",
                     "text",
-                    "--no-input",
                 ]
                 result = subprocess.run(
                     cmd_alt,

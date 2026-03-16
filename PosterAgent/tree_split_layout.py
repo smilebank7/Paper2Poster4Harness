@@ -7,10 +7,12 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+
 def parse_xml_with_recovery(xml_file_path):
     parser = etree.XMLParser(recover=True)
     tree = etree.parse(xml_file_path, parser)
     return tree.getroot()
+
 
 def parse_poster_xml(xml_file):
     """
@@ -79,15 +81,12 @@ def parse_poster_xml(xml_file):
             "width": w,
             "height": h,
             "text_blocks": text_blocks,
-            "figure_blocks": figure_blocks
+            "figure_blocks": figure_blocks,
         }
         panels_data.append(panel_info)
 
-    return {
-        "poster_width": poster_w,
-        "poster_height": poster_h,
-        "panels": panels_data
-    }
+    return {"poster_width": poster_w, "poster_height": poster_h, "panels": panels_data}
+
 
 def compute_panel_attributes(poster_data):
     """
@@ -108,14 +107,14 @@ def compute_panel_attributes(poster_data):
 
     poster_w = poster_data["poster_width"]
     poster_h = poster_data["poster_height"]
-    panels   = poster_data["panels"]
+    panels = poster_data["panels"]
 
     poster_area = max(poster_w * poster_h, 1.0)  # avoid zero
 
     # 1) Compute total text length across all panels
     # 2) Compute total figure area across all panels
-    total_text_length  = 0
-    total_figure_area  = 0
+    total_text_length = 0
+    total_figure_area = 0
 
     # We'll store partial info about each panel so we don't parse multiple times
     panel_list = []
@@ -126,20 +125,22 @@ def compute_panel_attributes(poster_data):
 
         # Sum area of figure blocks
         panel_fig_area = 0.0
-        for (fx, fy, fw, fh) in p["figure_blocks"]:
-            panel_fig_area += (fw * fh)
+        for fx, fy, fw, fh in p["figure_blocks"]:
+            panel_fig_area += fw * fh
 
-        panel_list.append({
-            "x": p["x"],
-            "y": p["y"],
-            "width": p["width"],
-            "height": p["height"],
-            "text_len": panel_text_len,
-            "fig_area": panel_fig_area
-        })
+        panel_list.append(
+            {
+                "x": p["x"],
+                "y": p["y"],
+                "width": p["width"],
+                "height": p["height"],
+                "text_len": panel_text_len,
+                "fig_area": panel_fig_area,
+            }
+        )
 
-        total_text_length  += panel_text_len
-        total_figure_area  += panel_fig_area
+        total_text_length += panel_text_len
+        total_figure_area += panel_fig_area
 
     # Avoid divide by zero
     if total_text_length < 1:
@@ -160,14 +161,10 @@ def compute_panel_attributes(poster_data):
         tp = pinfo["text_len"] / float(total_text_length)
         gp = pinfo["fig_area"] / float(total_figure_area)
 
-        results.append({
-            "tp": tp,
-            "gp": gp,
-            "sp": sp,
-            "rp": rp
-        })
+        results.append({"tp": tp, "gp": gp, "sp": sp, "rp": rp})
 
     return results
+
 
 def train_panel_attribute_inference(panel_records):
     """
@@ -192,15 +189,15 @@ def train_panel_attribute_inference(panel_records):
       }
     """
     # Build data arrays
-    X_list  = []
+    X_list = []
     sp_list = []
     rp_list = []
 
     for rec in panel_records:
-        tp = rec['tp']
-        gp = rec['gp']
-        sp = rec['sp']
-        rp = rec['rp']
+        tp = rec["tp"]
+        gp = rec["gp"]
+        sp = rec["sp"]
+        rp = rec["rp"]
         # X = [tp, gp, 1]
         X_list.append([tp, gp, 1.0])
         sp_list.append(sp)
@@ -226,12 +223,7 @@ def train_panel_attribute_inference(panel_records):
     residual_rp = y_rp - pred_rp
     sigma_r = np.var(residual_rp, ddof=1)
 
-    model_params = {
-        "w_s": w_s,
-        "sigma_s": sigma_s,
-        "w_r": w_r,
-        "sigma_r": sigma_r
-    }
+    model_params = {"w_s": w_s, "sigma_s": sigma_s, "w_r": w_r, "sigma_r": sigma_r}
     return model_params
 
 
@@ -267,7 +259,15 @@ def parse_poster_xml_for_figures(xml_path):
 
             hg = 0 if delta_x < -pw / 6 else (2 if delta_x > pw / 6 else 1)
 
-            record = {"sp": sp, "rp": rp, "lp": lp, "sg": sg, "rg": rg, "hg": hg, "ug": ug}
+            record = {
+                "sp": sp,
+                "rp": rp,
+                "lp": lp,
+                "sg": sg,
+                "rg": rg,
+                "hg": hg,
+                "ug": ug,
+            }
             records.append(record)
 
     return records
@@ -282,7 +282,7 @@ def train_figure_model(figure_records):
         X_ug.append(feats)
         y_ug.append(r["ug"])
 
-    clf_hg = LogisticRegression(multi_class="multinomial", solver="lbfgs", fit_intercept=False)
+    clf_hg = LogisticRegression(solver="lbfgs", fit_intercept=False)
     clf_hg.fit(X_hg, y_hg)
 
     lin_ug = LinearRegression(fit_intercept=False)
@@ -290,15 +290,11 @@ def train_figure_model(figure_records):
     residuals = y_ug - lin_ug.predict(X_ug)
     sigma_u = np.var(residuals, ddof=1)
 
-    return {
-        "clf_hg": clf_hg,
-        "w_u": lin_ug.coef_,
-        "sigma_u": sigma_u
-    }
+    return {"clf_hg": clf_hg, "w_u": lin_ug.coef_, "sigma_u": sigma_u}
 
 
 def main_train():
-    poster_dataset_path = 'assets/poster_data/Train'
+    poster_dataset_path = "assets/poster_data/Train"
     # loop through all folders in the dataset
     xml_files = []
     for folder in os.listdir(poster_dataset_path):
@@ -325,7 +321,10 @@ def main_train():
 
     return panel_model_params, figure_model_params
 
-def place_text_and_figures_exact(panel_dict, figure_model_params, section_title_height=32):
+
+def place_text_and_figures_exact(
+    panel_dict, figure_model_params, section_title_height=32
+):
     """
     Lay out text and figure boxes inside a panel.
 
@@ -335,11 +334,11 @@ def place_text_and_figures_exact(panel_dict, figure_model_params, section_title_
         • width / height == panel_dict["figure_aspect"]
     """
     # ---------------- Constants used for text layout -----------------
-    char_width_px  = 7
+    char_width_px = 7
     line_height_px = 16
     chars_per_line = max(int(panel_dict["width"] / char_width_px), 1)
 
-    total_lines_text  = np.ceil(panel_dict["text_len"] / chars_per_line)
+    total_lines_text = np.ceil(panel_dict["text_len"] / chars_per_line)
     total_text_height = total_lines_text * line_height_px
 
     x_p, y_p = panel_dict["x"], panel_dict["y"]
@@ -355,11 +354,11 @@ def place_text_and_figures_exact(panel_dict, figure_model_params, section_title_
     # -------------------------------------------------------
     def make_text_box(panel_id, x, y, width, height, textbox_id, textbox_name):
         return {
-            "panel_id":   panel_id,
-            "x":          float(x),
-            "y":          float(y),
-            "width":      float(width),
-            "height":     float(height),
+            "panel_id": panel_id,
+            "x": float(x),
+            "y": float(y),
+            "width": float(width),
+            "height": float(height),
             "textbox_id": textbox_id,
             "textbox_name": textbox_name,
         }
@@ -370,100 +369,149 @@ def place_text_and_figures_exact(panel_dict, figure_model_params, section_title_
     if panel_dict["figure_size"] <= 0:
         if has_title_in_name:
             text_boxes.append(
-                make_text_box(panel_dict["panel_id"], x_p, y_p, w_p, h_p,
-                              textbox_id=0,
-                              textbox_name=f'p<{panel_dict["panel_name"]}>_t0')
+                make_text_box(
+                    panel_dict["panel_id"],
+                    x_p,
+                    y_p,
+                    w_p,
+                    h_p,
+                    textbox_id=0,
+                    textbox_name=f"p<{panel_dict['panel_name']}>_t0",
+                )
             )
         else:
             title_h = min(section_title_height, h_p)
-            text_boxes.extend([
-                make_text_box(panel_dict["panel_id"], x_p, y_p, w_p, title_h,
-                              textbox_id=0,
-                              textbox_name=f'p<{panel_dict["panel_name"]}>_t0'),
-                make_text_box(panel_dict["panel_id"], x_p, y_p + title_h, w_p, h_p - title_h,
-                              textbox_id=1,
-                              textbox_name=f'p<{panel_dict["panel_name"]}>_t1'),
-            ])
-        return text_boxes, figure_boxes   # early‑return (simpler branch)
+            text_boxes.extend(
+                [
+                    make_text_box(
+                        panel_dict["panel_id"],
+                        x_p,
+                        y_p,
+                        w_p,
+                        title_h,
+                        textbox_id=0,
+                        textbox_name=f"p<{panel_dict['panel_name']}>_t0",
+                    ),
+                    make_text_box(
+                        panel_dict["panel_id"],
+                        x_p,
+                        y_p + title_h,
+                        w_p,
+                        h_p - title_h,
+                        textbox_id=1,
+                        textbox_name=f"p<{panel_dict['panel_name']}>_t1",
+                    ),
+                ]
+            )
+        return text_boxes, figure_boxes  # early‑return (simpler branch)
 
     # -----------------------------------------------------------------------
     # Case 2 — there *is* a figure
     # -----------------------------------------------------------------------
     # 1.  Sample horizontal‑alignment class (hg) and raw width fraction (ug)
-    feat      = np.array([panel_dict["sp"],
-                          panel_dict["text_len"],
-                          panel_dict["figure_size"],
-                          1.0]).reshape(1, -1)
+    feat = np.array(
+        [panel_dict["sp"], panel_dict["text_len"], panel_dict["figure_size"], 1.0]
+    ).reshape(1, -1)
 
-    clf_hg    = figure_model_params["clf_hg"]
+    clf_hg = figure_model_params["clf_hg"]
     hg_sample = int(np.argmax(clf_hg.predict_proba(feat)[0]))
 
-    mean_ug   = float(np.dot(figure_model_params["w_u"], feat.flatten()))
-    sigma_u   = float(np.sqrt(figure_model_params["sigma_u"]))
-    ug_sample = float(np.clip(np.random.normal(mean_ug, sigma_u), 0.10, 0.80))  # 10‑80 % of width
+    mean_ug = float(np.dot(figure_model_params["w_u"], feat.flatten()))
+    sigma_u = float(np.sqrt(figure_model_params["sigma_u"]))
+    ug_sample = float(
+        np.clip(np.random.normal(mean_ug, sigma_u), 0.10, 0.80)
+    )  # 10‑80 % of width
 
     # 2.  **Size the figure while *preserving* aspect ratio**
-    aspect     = float(panel_dict["figure_aspect"])       # width / height
-    fig_w      = ug_sample * w_p                          # preliminary width
-    fig_h      = fig_w / aspect
+    aspect = float(panel_dict["figure_aspect"])  # width / height
+    fig_w = ug_sample * w_p  # preliminary width
+    fig_h = fig_w / aspect
 
-    max_fig_h  = 0.60 * h_p                               # same limit you had
-    if fig_h > max_fig_h:                                 # too tall → scale down
-        scale  = max_fig_h / fig_h
+    max_fig_h = 0.60 * h_p  # same limit you had
+    if fig_h > max_fig_h:  # too tall → scale down
+        scale = max_fig_h / fig_h
         fig_w *= scale
-        fig_h  = max_fig_h        # (ratio still intact)
+        fig_h = max_fig_h  # (ratio still intact)
 
     # 3.  Horizontal placement
-    if hg_sample == 0:          # left
+    if hg_sample == 0:  # left
         fig_x = x_p
-    elif hg_sample == 2:        # right
+    elif hg_sample == 2:  # right
         fig_x = x_p + w_p - fig_w
-    else:                       # center
+    else:  # center
         fig_x = x_p + 0.5 * (w_p - fig_w)
     # Vertical centering
     fig_y = y_p + 0.5 * (h_p - fig_h)
 
     # 4.  Split text into “top” and “bottom” areas around the figure
-    top_text_h    = (fig_y - y_p)
+    top_text_h = fig_y - y_p
     bottom_text_h = (y_p + h_p) - (fig_y + fig_h)
 
     # --- build top‑text boxes
     if has_title_in_name:
         text_boxes.append(
-            make_text_box(panel_dict["panel_id"], x_p, y_p, w_p, top_text_h,
-                          textbox_id=0,
-                          textbox_name=f'p<{panel_dict["panel_name"]}>_t0')
+            make_text_box(
+                panel_dict["panel_id"],
+                x_p,
+                y_p,
+                w_p,
+                top_text_h,
+                textbox_id=0,
+                textbox_name=f"p<{panel_dict['panel_name']}>_t0",
+            )
         )
         next_id = 1
     else:
         title_h = min(section_title_height, top_text_h)
-        text_boxes.extend([
-            make_text_box(panel_dict["panel_id"], x_p, y_p, w_p, title_h,
-                          textbox_id=0,
-                          textbox_name=f'p<{panel_dict["panel_name"]}>_t0'),
-            make_text_box(panel_dict["panel_id"], x_p, y_p + title_h, w_p, top_text_h - title_h,
-                          textbox_id=1,
-                          textbox_name=f'p<{panel_dict["panel_name"]}>_t1'),
-        ])
+        text_boxes.extend(
+            [
+                make_text_box(
+                    panel_dict["panel_id"],
+                    x_p,
+                    y_p,
+                    w_p,
+                    title_h,
+                    textbox_id=0,
+                    textbox_name=f"p<{panel_dict['panel_name']}>_t0",
+                ),
+                make_text_box(
+                    panel_dict["panel_id"],
+                    x_p,
+                    y_p + title_h,
+                    w_p,
+                    top_text_h - title_h,
+                    textbox_id=1,
+                    textbox_name=f"p<{panel_dict['panel_name']}>_t1",
+                ),
+            ]
+        )
         next_id = 2
 
     # --- bottom text box
     text_boxes.append(
-        make_text_box(panel_dict["panel_id"], x_p, fig_y + fig_h, w_p, bottom_text_h,
-                      textbox_id=next_id,
-                      textbox_name=f'p<{panel_dict["panel_name"]}>_t{next_id}')
+        make_text_box(
+            panel_dict["panel_id"],
+            x_p,
+            fig_y + fig_h,
+            w_p,
+            bottom_text_h,
+            textbox_id=next_id,
+            textbox_name=f"p<{panel_dict['panel_name']}>_t{next_id}",
+        )
     )
 
     # 5.  Figure box
-    figure_boxes.append({
-        "panel_id":   panel_dict["panel_id"],
-        "x":          float(fig_x),
-        "y":          float(fig_y),
-        "width":      float(fig_w),
-        "height":     float(fig_h),
-        "figure_id":  0,
-        "figure_name": f'p<{panel_dict["panel_name"]}>_f0',
-    })
+    figure_boxes.append(
+        {
+            "panel_id": panel_dict["panel_id"],
+            "x": float(fig_x),
+            "y": float(fig_y),
+            "width": float(fig_w),
+            "height": float(fig_h),
+            "figure_id": 0,
+            "figure_name": f"p<{panel_dict['panel_name']}>_f0",
+        }
+    )
 
     return text_boxes, figure_boxes
 
@@ -487,7 +535,7 @@ def from_inches(value_in_inches, units_per_inch=72):
 
 def softmax(logits):
     s = sum(np.exp(logits))
-    return [np.exp(l)/s for l in logits]
+    return [np.exp(l) / s for l in logits]
 
 
 def infer_panel_attrs(panel_model, tp, gp):
@@ -508,17 +556,21 @@ def panel_layout_generation(panels, x, y, w, h):
     # If only 1 panel, place it entirely
     if len(panels) == 1:
         p = panels[0]
-        cur_rp = (w/h) if h>1e-9 else p["rp"]
+        cur_rp = (w / h) if h > 1e-9 else p["rp"]
         loss = abs(p["rp"] - cur_rp)
-        arrangement = [{
-            "panel_name": p["section_name"],
-            "panel_id": p["panel_id"],
-            "x": x, "y": y,
-            "width": w, "height": h
-        }]
+        arrangement = [
+            {
+                "panel_name": p["section_name"],
+                "panel_id": p["panel_id"],
+                "x": x,
+                "y": y,
+                "width": w,
+                "height": h,
+            }
+        ]
         return loss, arrangement
 
-    best_loss = float('inf')
+    best_loss = float("inf")
     best_arr = []
     total_sp = sum(pp["sp"] for pp in panels)
     n = len(panels)
@@ -549,10 +601,11 @@ def panel_layout_generation(panels, x, y, w, h):
 
     return best_loss, best_arr
 
+
 def split_textbox(textbox, ratio):
     """
     Splits a textbox dictionary horizontally into two parts.
-    
+
     Parameters:
       textbox (dict): A dictionary with the keys
                       'panel_id', 'x', 'y', 'width', 'height', 'textbox_id', 'textbox_name'
@@ -560,55 +613,62 @@ def split_textbox(textbox, ratio):
                             For example, if ratio is 3, then:
                               top_height = (3/4) * height
                               bottom_height = (1/4) * height
-                              
+
     Returns:
       tuple: Two dictionaries corresponding to the top and bottom split textboxes.
     """
     # Calculate the new heights
     total_ratio = ratio + 1  # because the ratio represents top:bottom as (ratio):(1)
-    top_height = textbox['height'] * ratio / total_ratio
-    bottom_height = textbox['height'] * 1 / total_ratio
+    top_height = textbox["height"] * ratio / total_ratio
+    bottom_height = textbox["height"] * 1 / total_ratio
 
     # Derive the base textbox name by splitting off the existing _t suffix if present.
     # This assumes the original textbox_name ends with "_t<number>".
-    base_name = textbox['textbox_name'].rsplit('_t', 1)[0]
+    base_name = textbox["textbox_name"].rsplit("_t", 1)[0]
 
     # Create the top textbox dictionary
     top_box = dict(textbox)  # make a shallow copy
-    top_box['height'] = top_height
+    top_box["height"] = top_height
     # y remains the same for the top textbox
-    top_box['textbox_name'] = f"{base_name}_t0"  # rename with _t0
+    top_box["textbox_name"] = f"{base_name}_t0"  # rename with _t0
 
     # Create the bottom textbox dictionary
     bottom_box = dict(textbox)  # make a shallow copy
-    bottom_box['y'] = textbox['y'] + top_height  # adjust the y position
-    bottom_box['height'] = bottom_height
-    bottom_box['textbox_name'] = f"{base_name}_t1"  # rename with _t1
+    bottom_box["y"] = textbox["y"] + top_height  # adjust the y position
+    bottom_box["height"] = bottom_height
+    bottom_box["textbox_name"] = f"{base_name}_t1"  # rename with _t1
 
     return top_box, bottom_box
 
-def generate_constrained_layout(paper_panels, poster_w, poster_h, title_height_ratio=0.1):
+
+def generate_constrained_layout(
+    paper_panels, poster_w, poster_h, title_height_ratio=0.1
+):
     # Find title panel explicitly
     try:
-        title_panel = next(p for p in paper_panels if ('title' in p["section_name"].lower()))
-        other_panels = [p for p in paper_panels if ('title' not in p["section_name"].lower())]
+        title_panel = next(
+            p for p in paper_panels if ("title" in p["section_name"].lower())
+        )
+        other_panels = [
+            p for p in paper_panels if ("title" not in p["section_name"].lower())
+        ]
     except StopIteration:
-        print('Oops, no title found, please try again.')
+        print("Oops, no title found, please try again.")
         raise
 
     title_h = poster_h * title_height_ratio
     title_layout = {
         "panel_name": title_panel["section_name"],
         "panel_id": title_panel["panel_id"],
-        "x": 0, "y": 0,
-        "width": poster_w, "height": title_h
+        "x": 0,
+        "y": 0,
+        "width": poster_w,
+        "height": title_h,
     }
 
     # Generate recursive layout on remaining space for other panels
     layout_loss, remaining_layout = panel_layout_generation(
-        other_panels,
-        x=0, y=title_h,
-        w=poster_w, h=poster_h - title_h
+        other_panels, x=0, y=title_h, w=poster_w, h=poster_h - title_h
     )
 
     # Combine title panel with others
@@ -622,14 +682,16 @@ def main_inference(
     figure_model_params,
     poster_width=1200,
     poster_height=800,
-    shrink_margin=0
+    shrink_margin=0,
 ):
     for p in paper_panels:
         sp, rp = infer_panel_attrs(panel_model_params, p["tp"], p["gp"])
         p["sp"] = sp
         p["rp"] = rp
 
-    layout_loss, panel_arrangement = generate_constrained_layout(paper_panels, poster_width, poster_height, title_height_ratio=0.1)
+    layout_loss, panel_arrangement = generate_constrained_layout(
+        paper_panels, poster_width, poster_height, title_height_ratio=0.1
+    )
     print("Panel layout cost:", layout_loss)
     for p in panel_arrangement:
         print("Panel:", p)
@@ -644,7 +706,7 @@ def main_inference(
         pid = pa["panel_id"]
         merged_panel = {
             "panel_id": pid,
-            "panel_name": pa['panel_name'],
+            "panel_name": pa["panel_name"],
             "x": pa["x"] + shrink_margin,
             "y": pa["y"] + shrink_margin,
             "width": pa["width"] - 2 * shrink_margin,
@@ -653,7 +715,7 @@ def main_inference(
             "rp": panel_map[pid]["rp"],
             "text_len": panel_map[pid]["text_len"],
             "figure_size": panel_map[pid]["figure_size"],
-            "figure_aspect": panel_map[pid]["figure_aspect"]
+            "figure_aspect": panel_map[pid]["figure_aspect"],
         }
         final_panels.append(merged_panel)
 
@@ -662,53 +724,80 @@ def main_inference(
 
     for p in final_panels:
         text_boxes, fig_boxes = place_text_and_figures_exact(p, figure_model_params)
-        text_arrangement.extend(text_boxes)          # text arrangement
-        figure_arrangement.extend(fig_boxes)       # figure arrangement
+        text_arrangement.extend(text_boxes)  # text arrangement
+        figure_arrangement.extend(fig_boxes)  # figure arrangement
 
     return panel_arrangement, figure_arrangement, text_arrangement
+
 
 def visualize_complete_layout(
     panels, text_boxes, figure_boxes, poster_width, poster_height
 ):
-    fig, ax = plt.subplots(figsize=(12,8))
+    fig, ax = plt.subplots(figsize=(12, 8))
     ax.set_xlim(0, poster_width)
     ax.set_ylim(0, poster_height)
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
 
     # Draw panels
     for panel in panels:
         rect = patches.Rectangle(
-            (panel["x"], panel["y"]), panel["width"], panel["height"],
-            linewidth=1, edgecolor='black', facecolor='none'
+            (panel["x"], panel["y"]),
+            panel["width"],
+            panel["height"],
+            linewidth=1,
+            edgecolor="black",
+            facecolor="none",
         )
         ax.add_patch(rect)
         ax.text(
-            panel["x"] + 5, panel["y"] + panel["height"] - 5,
-            f'Panel {panel["panel_id"]}', fontsize=8, va='top', color='black'
+            panel["x"] + 5,
+            panel["y"] + panel["height"] - 5,
+            f"Panel {panel['panel_id']}",
+            fontsize=8,
+            va="top",
+            color="black",
         )
 
     # Draw text boxes
     for txt in text_boxes:
         rect = patches.Rectangle(
-            (txt["x"], txt["y"]), txt["width"], txt["height"],
-            linewidth=1, edgecolor='green', linestyle='-.', facecolor='none'
+            (txt["x"], txt["y"]),
+            txt["width"],
+            txt["height"],
+            linewidth=1,
+            edgecolor="green",
+            linestyle="-.",
+            facecolor="none",
         )
         ax.add_patch(rect)
         ax.text(
-            txt["x"] + 2, txt["y"] + txt["height"] - 2,
-            f'Text {txt["panel_id"]}', fontsize=7, color='green', va='top'
+            txt["x"] + 2,
+            txt["y"] + txt["height"] - 2,
+            f"Text {txt['panel_id']}",
+            fontsize=7,
+            color="green",
+            va="top",
         )
 
     # Draw figures
     for fig_box in figure_boxes:
         rect = patches.Rectangle(
-            (fig_box["x"], fig_box["y"]), fig_box["width"], fig_box["height"],
-            linewidth=1, edgecolor='blue', linestyle='--', facecolor='none'
+            (fig_box["x"], fig_box["y"]),
+            fig_box["width"],
+            fig_box["height"],
+            linewidth=1,
+            edgecolor="blue",
+            linestyle="--",
+            facecolor="none",
         )
         ax.add_patch(rect)
         ax.text(
-            fig_box["x"] + 2, fig_box["y"] + 2,
-            f'Fig {fig_box["panel_id"]}', fontsize=7, color='blue', va='bottom'
+            fig_box["x"] + 2,
+            fig_box["y"] + 2,
+            f"Fig {fig_box['panel_id']}",
+            fontsize=7,
+            color="blue",
+            va="bottom",
         )
 
     plt.gca().invert_yaxis()  # optional: invert y-axis if needed
@@ -716,14 +805,13 @@ def visualize_complete_layout(
 
 
 def get_arrangments_in_inches(
-    width, 
-    height, 
-    panel_arrangement, 
-    figure_arrangement, 
+    width,
+    height,
+    panel_arrangement,
+    figure_arrangement,
     text_arrangement,
-    units_per_inch=72
+    units_per_inch=72,
 ):
-
     panel_arrangement_inches = copy.deepcopy(panel_arrangement)
     figure_arrangement_inches = copy.deepcopy(figure_arrangement)
     text_arrangement_inches = copy.deepcopy(text_arrangement)
@@ -746,5 +834,14 @@ def get_arrangments_in_inches(
         t["width"] = to_inches(t["width"], units_per_inch)
         t["height"] = to_inches(t["height"], units_per_inch)
 
-    width_inch, height_inch = to_inches(width, units_per_inch), to_inches(height, units_per_inch)
-    return width_inch, height_inch, panel_arrangement_inches, figure_arrangement_inches, text_arrangement_inches
+    width_inch, height_inch = (
+        to_inches(width, units_per_inch),
+        to_inches(height, units_per_inch),
+    )
+    return (
+        width_inch,
+        height_inch,
+        panel_arrangement_inches,
+        figure_arrangement_inches,
+        text_arrangement_inches,
+    )
