@@ -14,6 +14,19 @@ Claude Code follows the instructions in `AGENTS.md` to orchestrate the full pipe
 
 No API keys. No environment variables. Just your Claude Code subscription.
 
+## What This Repo Changes
+
+This repository replaces the AI backend of Paper2Poster while keeping the **entire original pipeline intact**:
+
+| Component | Original Paper2Poster | This Harness Version |
+|---|---|---|
+| AI Backend | CAMEL + OpenAI API (requires API key) | `claude -p` CLI (subscription, no key) |
+| Layout | Tree-split learned from 60+ posters ✅ | Same ✅ |
+| Overflow Detection | VLM (GPT-4o Vision) loop | Heuristic-based loop |
+| PPTX Code Generation | LLM generates python-pptx code ✅ | Same ✅ |
+| Theme & Style | AI-driven theme selection ✅ | Same ✅ |
+| Content Refinement | Multi-round critic loop ✅ | Same ✅ |
+
 ## Prerequisites
 
 - [Claude Code](https://github.com/anthropics/claude-code) or [OpenCode](https://github.com/opencode-ai/opencode) installed

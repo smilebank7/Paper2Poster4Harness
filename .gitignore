@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.venv/
+.ruff_cache/
 tmp/
 tree_splits/
 contents/
@@ -16,3 +18,7 @@ log/
 dist/
 build/
 workspace/
+output/
+input/*.pdf
+input/*.PDF
+pyrightconfig.json

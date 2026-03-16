@@ -4,61 +4,48 @@ Generate academic posters from research papers. Drop a PDF in `input/`, tell me 
 
 ## How It Works
 
-When you ask me to generate a poster, I follow this pipeline:
+This is a faithful adaptation of [Paper2Poster](https://github.com/Paper2Poster/Paper2Poster).
+All AI calls are routed through `claude -p` CLI (your subscription, no API key needed).
 
-1. **Parse** - Extract text and figures from the PDF
-2. **Structure** - Organize paper content into poster sections
-3. **Filter** - Select the most relevant figures/tables
-4. **Plan** - Assign figures to sections
-5. **Layout** - Generate spatial layout (deterministic algorithm)
-6. **Content** - Write bullet-point text for each section
-7. **Render** - Generate the final poster (PPTX + PNG)
+The full original pipeline is preserved:
+- **Tree-split layout** — learned from 60+ real poster examples
+- **Overflow detection loop** — iterative content refinement (up to 10 rounds)
+- **PPTX code generation** — AI writes python-pptx code directly
+- **Theme & style** — automated color/font/border styling
 
 ## Quick Start
 
 1. Place your paper PDF in `input/`
-2. Tell me: "포스터 만들어줘" or "Generate a poster from the paper in input/"
+2. Tell me: "포스터 만들어줘" or "Generate a poster"
 
-## Pipeline Details
+## What I Do
 
-### Step 1: Parse PDF
-I run the parsing script to extract text and images:
+When you ask me to generate a poster, I run:
+
 ```bash
-python scripts/parse_pdf.py input/{paper}.pdf --output-dir workspace/{paper}/
-```
-This produces: `workspace/{paper}/paper.md` + `workspace/{paper}/images/`
-
-### Step 2: Structure Content
-I read `workspace/{paper}/paper.md` and follow `prompts/01_structure_paper.md` to create:
-`workspace/{paper}/raw_content.json`
-
-### Step 3: Filter Figures
-I read `workspace/{paper}/image_metadata.json` and follow `prompts/02_filter_figures.md` to create:
-`workspace/{paper}/filtered_figures.json`
-
-### Step 4: Plan Section-Figure Assignment
-I follow `prompts/03_plan_sections.md` to assign figures to sections:
-`workspace/{paper}/figure_plan.json`
-
-### Step 5: Generate Layout
-I run the layout algorithm:
-```bash
-python scripts/generate_layout.py workspace/{paper}/raw_content.json workspace/{paper}/figure_plan.json --output workspace/{paper}/layout.json
+.venv/bin/python3 PosterAgent/new_pipeline.py \
+    --paper_path input/{paper}.pdf \
+    --poster_width_inches 48 \
+    --poster_height_inches 36 \
+    --tmp_dir workspace/tmp
 ```
 
-### Step 6: Generate Content
-I follow `prompts/04_generate_bullets.md` and `prompts/05_generate_title.md` to create:
-`workspace/{paper}/poster_content.json`
+This executes the full 6-stage pipeline:
 
-### Step 7: Render Poster
-```bash
-python scripts/render_poster.py workspace/{paper}/layout.json workspace/{paper}/poster_content.json --output output/{paper}/poster.pptx --config config/poster.yaml
-```
+1. **Parse** — Docling extracts text + figures from PDF
+2. **Filter** — AI selects relevant figures/tables
+3. **Outline & Layout** — AI plans sections → tree-split algorithm computes panel bounding boxes
+4. **Content** — AI generates bullet points with overflow detection loop
+5. **Style** — Theme, colors, fonts applied from config/poster.yaml
+6. **Render** — AI generates python-pptx code → executes → PPTX + PNG
+
+Each AI call goes through `harness/agent.py` → `claude -p` CLI → your Claude subscription.
 
 ## Output
-- `output/{paper}/poster.pptx` - Editable PowerPoint poster
-- `output/{paper}/poster.png` - Preview image
+- `<harness_harness>_generated_posters/{paper}/` — poster.pptx + slide images
+- Or `output/{paper}/` if manually specified
 
 ## Prerequisites
 - Python 3.10+ with: `pip install -r requirements.txt`
-- LibreOffice (`soffice`) for PNG conversion
+- Claude Code CLI (`claude`) or OpenCode CLI installed and authenticated
+- LibreOffice (`soffice`) for PPTX → PNG conversion
