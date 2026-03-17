@@ -27,12 +27,12 @@ poster_author_font_size: 48
 
 # Color configuration (RGB tuples: [R, G, B] where each value is 0-255)
 # Colors for section titles and poster title/author area
-title_text_color: [0, 0, 0]      # Black text for titles
-title_fill_color: null      # White background for titles
+title_text_color: [255, 255, 255]      # White text on colored headers
+title_fill_color: [47, 85, 151]        # Navy blue header background
 
 # Colors for main body text (bullet points in sections)
-main_text_color: [47, 85, 151]             # Black text for main content
-main_text_fill_color: null             # No background fill (null/transparent)
+main_text_color: [0, 0, 0]                # Black text for main content
+main_text_fill_color: null                 # No background fill (null/transparent)
 
 # Vertical alignment for section titles
 # Options: "top", "middle", "bottom"
