@@ -11,8 +11,12 @@ User wants to generate a poster from a PDF paper in `input/`.
 ## Prerequisites
 ```bash
 # Check dependencies
-.venv/bin/python3 -c "import docling; import pptx; import yaml; print('OK')"
+.venv/bin/python3 -c "import docling; import pptx; import yaml; print('Core OK')"
+.venv/bin/python3 -c "import paperbanana; print('PaperBanana OK')" 2>/dev/null || echo "PaperBanana not installed (figures will be text-only)"
 which claude
+
+# For figure generation (optional):
+# export GOOGLE_API_KEY=your-gemini-api-key
 ```
 
 ## Workflow

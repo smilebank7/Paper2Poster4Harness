@@ -15,6 +15,10 @@ from PosterAgent.tree_split_layout import (
     to_inches,
 )
 from PosterAgent.gen_pptx_code import generate_poster_code
+from PosterAgent.paperbanana_integration import (
+    generate_figures,
+    inject_figures_into_pipeline,
+)
 from utils.src.utils import ppt_to_images
 from PosterAgent.gen_poster_content import gen_bullet_point_content
 
@@ -100,6 +104,17 @@ def main():
         "--use_google_search",
         action="store_true",
         help="Use Google Custom Search API for logo search (requires API keys in .env)",
+    )
+    parser.add_argument(
+        "--no_paperbanana",
+        action="store_true",
+        help="Skip PaperBanana figure generation (poster will be text-only)",
+    )
+    parser.add_argument(
+        "--max_figures",
+        type=int,
+        default=3,
+        help="Maximum number of PaperBanana figures to generate (default: 3)",
     )
 
     args = parser.parse_args()
@@ -240,6 +255,24 @@ def main():
             # Note: Web search is now handled inside get_logo_path automatically
         print("=" * 60 + "\n")
 
+    paperbanana_figures = {}
+    if not args.no_paperbanana:
+        print("\n🎨 Generating figures with PaperBanana (Gemini)...", flush=True)
+        raw_content_path = f"contents/<{args.model_name_t}_{args.model_name_v}>_{args.poster_name}_raw_content.json"
+        if os.path.exists(raw_content_path):
+            raw_content_for_pb = json.load(open(raw_content_path, "r"))
+            pb_output_dir = f"<{args.model_name_t}_{args.model_name_v}>_images_and_tables/{args.poster_name}"
+            paperbanana_figures = generate_figures(
+                raw_content_for_pb,
+                pb_output_dir,
+                max_figures=args.max_figures,
+            )
+            print(f"Generated {len(paperbanana_figures)} PaperBanana figures")
+        else:
+            print(
+                f"⚠️  Raw content not found at {raw_content_path}, skipping PaperBanana"
+            )
+
     # Step 2: Filter unnecessary images and tables
     input_token, output_token = filter_image_table(args, agent_config_t)
     total_input_tokens_t += input_token
@@ -259,6 +292,21 @@ def main():
     input_token, output_token, panels, figures = gen_outline_layout_v2(
         args, agent_config_t
     )
+    if paperbanana_figures and (not figures or len(figures) == 0):
+        print("📌 Injecting PaperBanana figures into pipeline...")
+        figures = inject_figures_into_pipeline(
+            panels, paperbanana_figures, images, tables
+        )
+        print(f"   Injected {len(figures)} figures into {len(panels)} panels")
+    elif paperbanana_figures and figures:
+        supplemented = inject_figures_into_pipeline(
+            panels, paperbanana_figures, images, tables
+        )
+        for section_name, fig_info in supplemented.items():
+            if section_name not in figures:
+                figures[section_name] = fig_info
+                print(f"   Supplemented: {section_name}")
+
     total_input_tokens_t += input_token
     total_output_tokens_t += output_token
     print(f"Outline token consumption: {input_token} -> {output_token}")
@@ -534,7 +582,7 @@ def main():
         conference_logo_path=conference_logo_path,
     )
 
-    output, err = run_code(poster_code)
+    _, err = run_code(poster_code)
     if err is not None:
         raise RuntimeError(f"Error in generating PowerPoint: {err}")
 

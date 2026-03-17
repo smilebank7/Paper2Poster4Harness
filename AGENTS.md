@@ -23,8 +23,8 @@ The full original pipeline is preserved:
 When you ask me to generate a poster, I run:
 
 ```bash
-.venv/bin/python3 PosterAgent/new_pipeline.py \
-    --paper_path input/{paper}.pdf \
+GOOGLE_API_KEY=your-key .venv/bin/python3 PosterAgent/new_pipeline.py \
+    --poster_path input/{paper}/paper.pdf \
     --poster_width_inches 48 \
     --poster_height_inches 36 \
     --tmp_dir workspace/tmp
@@ -49,3 +49,19 @@ Each AI call goes through `harness/agent.py` → `claude -p` CLI → your Claude
 - Python 3.10+ with: `pip install -r requirements.txt`
 - Claude Code CLI (`claude`) or OpenCode CLI installed and authenticated
 - LibreOffice (`soffice`) for PPTX → PNG conversion
+
+## Figure Generation (Optional but Recommended)
+
+This repo integrates [PaperBanana](https://github.com/llmsresearch/paperbanana) for automatic figure generation using Gemini's free tier.
+
+### Setup
+1. Get a free Gemini API key: https://makersuite.google.com/app/apikey
+2. Set it: `export GOOGLE_API_KEY=your-key`
+
+### How It Works
+When generating a poster, the pipeline automatically:
+1. Selects the most content-rich sections (up to 3)
+2. Calls PaperBanana to generate academic diagrams for each
+3. Injects the diagrams into the poster layout
+
+To skip figure generation: add `--no_paperbanana` flag.
