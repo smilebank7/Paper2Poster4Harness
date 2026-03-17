@@ -66,12 +66,13 @@ async def generate_figures_async(raw_content_json, output_dir, max_figures=3):
 
     settings = Settings(
         vlm_provider="gemini",
-        vlm_model="gemini-2.0-flash",
+        vlm_model="gemini-2.5-flash",
         image_provider="google_imagen",
-        image_model="gemini-3-pro-image-preview",
-        refinement_iterations=2,
+        image_model="gemini-2.5-flash-image",
+        refinement_iterations=1,
         output_dir=output_dir,
         output_format="png",
+        num_retrieval_examples=3,
     )
 
     pipeline = PaperBananaPipeline(settings=settings)
